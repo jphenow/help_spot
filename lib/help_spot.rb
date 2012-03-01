@@ -1,6 +1,7 @@
 require 'uri'
 require 'net/http'
 require 'json'
+require 'yaml'
 
 ##
 # help_spot
@@ -39,7 +40,7 @@ module HelpSpot
       yml_file    = app_root+config_file
       
       raise yml_file+" not found" unless File.exist? yml_file
-      @config = YAML.load_file(yml_file)
+      @config = YAML.load(File.open yml_file)
     end
 
     # sends a feedback request to HelpSpot and returns the request ID number and access key
@@ -70,6 +71,20 @@ module HelpSpot
       JSON.parse(api_request('request.create', 'POST', help_form))['xRequest'] rescue []
     end
 
+    def get_request(request_id)
+      JSON.parse(api_request('private.request.get', 'GET', {:xRequest => request_id})) if request_id
+    end
+
+    def get_changed(time)
+      JSON.parse(api_request('private.request.getChanged', 'GET', {:dtGMTChange => time.strftime('%s')}))["xRequest"]
+    end
+
+    def get_custom_fields(category=nil)
+      JSON.parse(api_request('private.request.getCustomFields', 'GET', {:xCategory => category}))["field"]
+    end
+
+    
+
     # Returns an array of tickets belonging to a given user id.
     # 
     # == Authentication
@@ -79,8 +94,8 @@ module HelpSpot
     # * user_id
     #     The user who's tickets you wish to view.
     #
-    def get_by_user_id(args)
-      JSON.parse(api_request('private.request.search', 'GET', {:sUserId => args[:user_id]}))['request'] rescue nil
+    def get_by_user_id(user_id)
+      JSON.parse(api_request('private.request.search', 'GET', {:sUserId => user_id}))['request']
     end
 
     # Returns ticket categories.
