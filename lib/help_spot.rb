@@ -33,15 +33,7 @@ module HelpSpot
     #
     def configure(args={})    
       # work out the default app_root
-      if args[:app_root]
-        app_root = args[:app_root]
-      elsif defined?(Merb)
-        app_root = Merb.root
-      elsif defined?(Rails)
-        app_root = RAILS_ROOT
-      else
-        app_root = '.'
-      end
+      app_root = args[:app_root] || '.'
       
       config_file = args[:config_file] || '/config/help_spot.yml'
       yml_file    = app_root+config_file
@@ -133,79 +125,30 @@ module HelpSpot
       end
       orig_categories
     end
-    
-    # Returns an array of forums
-    #
-    def forums_list
-      JSON.parse(HelpSpot.api_request('forums.list'))['forum'] rescue []
-    end
-    
-    # Returns an array of forums
-    #
-    # == Options
-    # * forum_id
-    #     The numeric id of the forum you want.
-    def forum_get(args)
-      JSON.parse(HelpSpot.api_request('forums.get', 'GET', :xForumId => args[:forum_id])) rescue []
-    end
-    
-    # Returns an array of topics from a given forum
-    #
-    # == Options
-    # * forum_id
-    #     The numeric id of the forum you want.
-    # * start
-    #     record set position to start at
-    # * length
-    #     how many records to return
-    #
-    def forum_get_topics(args={})
-      JSON.parse(HelpSpot.api_request('forums.getTopics', 'GET', {:xForumId => args[:forum_id]}.merge(args)))['topic'] rescue []
-    end
-    
-    # Returns an array of posts from a given topic
-    #
-    # == Options
-    # * topic_id
-    #     The numeric id of the topic
-    #
-    def forum_get_topic_posts(args={})
-      JSON.parse(HelpSpot.api_request('forums.getPosts', 'GET', :xTopicId => args[:topic_id]))['post'] rescue []
-    end
-    
 
-    #private
-      def api_request(api_method, http_method='POST', args={})
-        api_params =  {:method => api_method, :output => 'json'}.merge(args)
-        query_params = api_params.collect{|k,v| [k.to_s, v.to_s]} # [URI.encode(k.to_s),URI.encode(v.to_s.gsub(/\ /, '+'))]
-        built_query  = query_params.collect{|i| i.join('=')}.join('&') # make a query string
-    
-        ru = URI::parse(@config['root_url']) # where ru = ROOT_URL
-        merged_query = [built_query, (ru.query == '' ? nil : ru.query)].compact.join('&') # merge our generated query string with the ROOT_URL's query string
-    
-        url = URI::HTTP.new(ru.scheme, ru.userinfo, ru.host, ru.port, ru.registry, ru.path, ru.opaque, merged_query, ru.fragment)
-    
-        if http_method == 'POST'
-          req = Net::HTTP::Post.new(url.path)
-          req.set_form_data(query_params)
-          req.basic_auth @config['username'], @config['password']
-          res = Net::HTTP.new(url.host, url.port).start {|http| http.request(req) }
-        else
-          req = Net::HTTP::Get.new(url.path+'?'+url.query)
-          req.basic_auth @config['username'], @config['password']
-          res = Net::HTTP.start(url.host, url.port) {|http| http.request(req) }
-        end
-
-        res.body
+    def api_request(api_method, http_method='POST', args={})
+      api_params =  {:method => api_method, :output => 'json'}.merge(args)
+      query_params = api_params.collect{|k,v| [k.to_s, v.to_s]} # [URI.encode(k.to_s),URI.encode(v.to_s.gsub(/\ /, '+'))]
+      built_query  = query_params.collect{|i| i.join('=')}.join('&') # make a query string
+  
+      ru = URI::parse(@config['root_url']) # where ru = ROOT_URL
+      merged_query = [built_query, (ru.query == '' ? nil : ru.query)].compact.join('&') # merge our generated query string with the ROOT_URL's query string
+  
+      url = URI::HTTP.new(ru.scheme, ru.userinfo, ru.host, ru.port, ru.registry, ru.path, ru.opaque, merged_query, ru.fragment)
+  
+      if http_method == 'POST'
+        req = Net::HTTP::Post.new(url.path)
+        req.set_form_data(query_params)
+        req.basic_auth @config['username'], @config['password']
+        res = Net::HTTP.new(url.host, url.port).start {|http| http.request(req) }
+      else
+        req = Net::HTTP::Get.new(url.path+'?'+url.query)
+        req.basic_auth @config['username'], @config['password']
+        res = Net::HTTP.start(url.host, url.port) {|http| http.request(req) }
       end
+
+      res.body
+    end
       
   end # class
 end # module
-
-
-if defined?(Merb::Plugins)
-  Merb::BootLoader.after_app_loads do
-    HelpSpot.configure
-    HELPSPOT_CATEGORIES = HelpSpot.category_key_value_pairs_without().sort rescue []
-  end
-end
