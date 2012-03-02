@@ -41,6 +41,11 @@ module HelpSpot
       
       raise yml_file+" not found" unless File.exist? yml_file
       @config = YAML.load(File.open yml_file)
+      @config["api_url"] = @config["root_url"] + "/api/index.php?output=json"
+    end
+
+    def root_url
+      @config["root_url"]
     end
 
     # sends a feedback request to HelpSpot and returns the request ID number and access key
@@ -75,15 +80,17 @@ module HelpSpot
       JSON.parse(api_request('private.request.get', 'GET', {:xRequest => request_id})) if request_id
     end
 
-    def get_changed(time)
-      JSON.parse(api_request('private.request.getChanged', 'GET', {:dtGMTChange => time.strftime('%s')}))["xRequest"]
+    def get_changed(time, options={})
+      JSON.parse(api_request('private.request.search', 'GET', {:afterDate => time.to_i}.merge(options)))["request"]
     end
 
     def get_custom_fields(category=nil)
       JSON.parse(api_request('private.request.getCustomFields', 'GET', {:xCategory => category}))["field"]
     end
 
-    
+    def get_categories(category=nil)
+      JSON.parse(api_request('request.getCategories', 'GET'))["category"]
+    end
 
     # Returns an array of tickets belonging to a given user id.
     # 
@@ -146,7 +153,7 @@ module HelpSpot
       query_params = api_params.collect{|k,v| [k.to_s, v.to_s]} # [URI.encode(k.to_s),URI.encode(v.to_s.gsub(/\ /, '+'))]
       built_query  = query_params.collect{|i| i.join('=')}.join('&') # make a query string
   
-      ru = URI::parse(@config['root_url']) # where ru = ROOT_URL
+      ru = URI::parse(@config['api_url']) # where ru = ROOT_URL
       merged_query = [built_query, (ru.query == '' ? nil : ru.query)].compact.join('&') # merge our generated query string with the ROOT_URL's query string
   
       url = URI::HTTP.new(ru.scheme, ru.userinfo, ru.host, ru.port, ru.registry, ru.path, ru.opaque, merged_query, ru.fragment)
