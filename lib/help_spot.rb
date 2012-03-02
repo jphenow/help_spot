@@ -80,8 +80,15 @@ module HelpSpot
       JSON.parse(api_request('private.request.get', 'GET', {:xRequest => request_id})) if request_id
     end
 
-    def get_changed(time, options={})
-      JSON.parse(api_request('private.request.search', 'GET', {:afterDate => time.to_i}.merge(options)))["request"]
+    def get_changed(time, category)
+      requests = []
+      req_ids = JSON.parse(api_request('private.request.getChanged', 'GET', {:dtGMTChange => time.to_i}))["xRequest"]
+      req_ids.uniq!
+      req_ids.each do |req_id|
+        request = get_request(req_id)
+        requests << request if request["xCategory"] == category
+      end
+      requests
     end
 
     def get_custom_fields(category=nil)
