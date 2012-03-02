@@ -48,34 +48,6 @@ module HelpSpot
       @config["root_url"]
     end
 
-    # sends a feedback request to HelpSpot and returns the request ID number and access key
-    #
-    # == Options
-    # In addition to note you must also have at least one of the following set: first_name, last_name, user_id, email or phone
-    # * note
-    #     The body of the ticket
-    # * category
-    # * first_name
-    # * last_name
-    # * user_id
-    # * email
-    # * phone
-    # * urgent
-    #     A boolean flag. Defaults to false.
-    #
-    def create(args)                   
-      help_form = {:tNote       => args[:note],
-                   :xCategory   => args[:category],
-                   :sFirstName  => args[:first_name],
-                   :sLastName   => args[:last_name],
-                   :sUserId     => args[:user_id],
-                   :sEmail      => args[:email],
-                   :sPhone      => args[:phone],
-                   :fUrgent     => args[:urgent]}.reject!{|k,v| v == nil}
-                   
-      JSON.parse(api_request('request.create', 'POST', help_form))['xRequest'] rescue []
-    end
-
     def get_request(request_id)
       JSON.parse(api_request('private.request.get', 'GET', {:xRequest => request_id})) if request_id
     end
@@ -99,28 +71,6 @@ module HelpSpot
       JSON.parse(api_request('request.getCategories', 'GET'))["category"]
     end
 
-    # Returns an array of tickets belonging to a given user id.
-    # 
-    # == Authentication
-    # This method does require authentication.
-    # 
-    # == Options
-    # * user_id
-    #     The user who's tickets you wish to view.
-    #
-    def get_by_user_id(user_id)
-      JSON.parse(api_request('private.request.search', 'GET', {:sUserId => user_id}))['request']
-    end
-
-    # Returns ticket categories.
-    # 
-    # == Authentication
-    # This method does require authentication.
-    # 
-    # == Options
-    # * include_deleted
-    #     true if you want to include deleted categories. 
-    #
     def categories(args={})
       res = api_request('private.request.getCategories', 'GET')
       res = JSON.parse(res)['category'] rescue []
@@ -131,30 +81,11 @@ module HelpSpot
       
       return res
     end
-    
-    # Returns an array of non-deleted categories, as key value pairs. Useful for select lists.
-    # 
-    # == Authentication
-    # This method does require authentication.
-    # 
-    def category_key_value_pairs
-      categories.collect{|k,v| [k,v['sCategory']]} rescue []
-    end
-    
-    # Returns non-deleted categories, with a list of predefined categories removed
-    #
-    def category_key_value_pairs_without(categories=nil)
-      categories ||= @config['hidden_categories'] rescue nil
-      
-      orig_categories = category_key_value_pairs
-      if categories
-        categories.each do |category|
-          orig_categories.reject!{|i| i[1] == category}
-        end
-      end
-      orig_categories
-    end
 
+    def update_request(options)
+      JSON.parse(api_request('private.request.update', 'POST', options))
+    end
+    
     def api_request(api_method, http_method='POST', args={})
       api_params =  {:method => api_method, :output => 'json'}.merge(args)
       query_params = api_params.collect{|k,v| [k.to_s, v.to_s]} # [URI.encode(k.to_s),URI.encode(v.to_s.gsub(/\ /, '+'))]
