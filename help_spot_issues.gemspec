@@ -3,15 +3,13 @@ $:.push File.expand_path("../lib", __FILE__)
 require "help_spot/version"
 
 Gem::Specification.new do |s|
-  s.name        = "help_spot"
+  s.name        = "help_spot_issues"
   s.version     = HelpSpot::VERSION
   s.authors     = ["Jon Phenow"]
   s.email       = ["j.phenow@gmail.com"]
   s.homepage    = ""
   s.summary     = %q{Connector to Help Spot API}
   s.description = %q{}
-
-  s.rubyforge_project = "help_spot"
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
